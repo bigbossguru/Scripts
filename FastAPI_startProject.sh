@@ -59,10 +59,11 @@ touch tests/__init__.py
 
 # Default settings Core/config.py
 printf "import secrets
-import os\nfrom dotenv import load_dotenv\n
+import os\nfrom dotenv import load_dotenv
+from pathlib import Path\n
 from pydantic import BaseSettings\n\n
 class Settings(BaseSettings):
-    load_dotenv(os.path.abspath(\"project/backend/.env\"))\n
+    load_dotenv(Path(__file__).parent.parent.parent / \".env\")\n
     # Application
     PROJECT_NAME: str = \"My API\"
     PROJECT_VERSION: str = \"1.0\"
