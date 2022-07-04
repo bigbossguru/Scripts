@@ -19,7 +19,7 @@ touch docker-compose.yml .gitignore README.md
 
 cd backend
 mkdir app .venv
-printf "fastapi\nuvicorn\nSQLAlchemy\nalembic\npydantic" > requirements.txt
+printf "fastapi\nuvicorn\nSQLAlchemy\nalembic\npydantic\npython-dotenv" > requirements.txt
 touch Dockerfile entrypoint.sh .env .dockerignore
 
 python3 -m pip install pipenv || python -m pip install pipenv 
@@ -56,6 +56,7 @@ touch schemas/__init__.py
 # Tests folder
 touch tests/__init__.py
 
+
 # Default settings Core/config.py
 printf "import secrets
 import os\n
@@ -66,14 +67,14 @@ class Settings(BaseSettings):
     PROJECT_VERSION: str = \"1.0\"
     API_V1_STR: str = \"/api/v1\"
     SECRET_KEY: str = secrets.token_urlsafe(32)
-    SQLALCHEMY_DATABASE_URI: str = \"sqlite:///db.sqlite3\"\n
+    DATABASE_URL: str = \"sqlite:///db.sqlite3\"\n
 settings = Settings()\n" > core/config.py
 
 # Default Database settings
 printf "from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker\n
 from app.core.config import settings\n\n
-engine = create_engine(settings.SQLALCHEMY_DATABASE_URI, connect_args={\"check_same_thread\": False})
+engine = create_engine(settings.DATABASE_URL, connect_args={\"check_same_thread\": False})
 local_session = sessionmaker(autocommit=False, autoflush=False, bind=engine)\n
 def get_session():
     with local_session() as session:
@@ -161,10 +162,51 @@ from app.api.api_v1.endpoints import user\n
 api_router = APIRouter()
 api_router.include_router(user.router, prefix=\"/users\", tags=[\"users\"])\n" > api/api_v1/api.py
 
-cd ../..
+# Alembic default settings ENV file
+printf "from logging.config import fileConfig
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
+from alembic import context\n
+from app import models
+from app.core.config import settings\n\n
+config = context.config
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)\n
+target_metadata = models.Base.metadata\n
+def get_url():
+    return settings.DATABASE_URL\n\n
+def run_migrations_offline() -> None:
+    url = get_url()
+    context.configure(url=url, target_metadata=target_metadata, literal_binds=True, dialect_opts={\"paramstyle\": \"named\"})
+    with context.begin_transaction():
+        context.run_migrations()\n\n
+def run_migrations_online() -> None:
+    configuration = config.get_section(config.config_ini_section)
+    # Here override url from alembic.ini on the core.config 
+    configuration[\"sqlalchemy.url\"] = get_url()
+    connectable = engine_from_config(configuration, prefix=\"sqlalchemy.\", poolclass=pool.NullPool)
+    with connectable.connect() as connection:
+        context.configure(connection=connection, target_metadata=target_metadata)
+        with context.begin_transaction():
+            context.run_migrations()\n\n
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()" > migrations/env.py
+
+cd ..
+# Provide migrations database using Alembic
+pipenv run alembic revision --autogenerate -m "init database"
+pipenv run alembic upgrade head
+
+cd ..
 # Filling in a entrypoint file
 printf "#!/bin/bash\n\nset -e\n
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000" > backend/entrypoint.sh
+
+# Create .env file with presets
+printf "DATABASE_URI=\nDB_NAME=
+DB_USER=\nDB_PASSWD=\nDB_HOST=\nDB_PORT=" > backend/.env
 
 # Filling in git and docker ignore files
 printf "### Python ###
@@ -275,6 +317,14 @@ cython_debug/\n
 .idea/
 .vscode/" > .gitignore
 cp .gitignore backend/.dockerignore
+
+printf "# The automatic generated a FastAPI project structure\n
+## Quick start\n
+### Activate virtual environment\n
+\`\`\`\ncd project/backend\npipenv shell\n\`\`\`\n
+### Start FastAPI server\n
+\`\`\`\nuvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n\`\`\`\n
+" > README.md
 
 echo "-----------------------------"
 echo Finished $@
