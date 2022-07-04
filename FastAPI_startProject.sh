@@ -59,15 +59,16 @@ touch tests/__init__.py
 
 # Default settings Core/config.py
 printf "import secrets
-import os\n
+import os\nfrom dotenv import load_dotenv\n
 from pydantic import BaseSettings\n\n
 class Settings(BaseSettings):
+    load_dotenv(os.path.abspath(\"project/backend/.env\"))\n
     # Application
     PROJECT_NAME: str = \"My API\"
     PROJECT_VERSION: str = \"1.0\"
     API_V1_STR: str = \"/api/v1\"
     SECRET_KEY: str = secrets.token_urlsafe(32)
-    DATABASE_URL: str = \"sqlite:///db.sqlite3\"\n
+    DATABASE_URL: str = os.environ.get(\"DATABASE_URL\", \"sqlite:///db.sqlite3\")\n
 settings = Settings()\n" > core/config.py
 
 # Default Database settings
@@ -196,8 +197,8 @@ else:
 
 cd ..
 # Provide migrations database using Alembic
-pipenv run alembic revision --autogenerate -m "init database"
-pipenv run alembic upgrade head
+# pipenv run alembic revision --autogenerate -m "init database"
+# pipenv run alembic upgrade head
 
 cd ..
 # Filling in a entrypoint file
@@ -205,7 +206,7 @@ printf "#!/bin/bash\n\nset -e\n
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000" > backend/entrypoint.sh
 
 # Create .env file with presets
-printf "DATABASE_URI=\nDB_NAME=
+printf "DATABASE_URL=sqlite:///fastapidb.sqlite3\nDB_NAME=
 DB_USER=\nDB_PASSWD=\nDB_HOST=\nDB_PORT=" > backend/.env
 
 # Filling in git and docker ignore files
@@ -322,6 +323,9 @@ printf "# The automatic generated a FastAPI project structure\n
 ## Quick start\n
 ### Activate virtual environment\n
 \`\`\`\ncd project/backend\npipenv shell\n\`\`\`\n
+
+### Create and migrate database using Alembic commands\n
+\`\`\`\npipenv run alembic revision --autogenerate -m \"init database\"\nalembic upgrade head\n\`\`\`\n
 ### Start FastAPI server\n
 \`\`\`\nuvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n\`\`\`\n
 " > README.md
