@@ -11,11 +11,11 @@ set -e
 echo "Start generate project folder"
 echo "-----------------------------"
 
-mkdir project
-cd project
+mkdir project || cd project
+cd project || :
 
 mkdir backend
-touch docker-compose.yml .gitignore README.md
+touch docker-compose.yml README.md
 
 cd backend
 mkdir app .venv
@@ -317,19 +317,21 @@ dmypy.json\n
 cython_debug/\n
 # PyCharm and VScode
 .idea/
-.vscode/" > .gitignore
-cp .gitignore backend/.dockerignore
+.vscode/" > backend/.gitignore
+cp backend/.gitignore backend/.dockerignore
 
 printf "# The automatic generated a FastAPI project structure\n
 ## Quick start\n
 ### Activate virtual environment\n
 \`\`\`\ncd project/backend\npipenv shell\n\`\`\`\n
-
 ### Create and migrate database using Alembic commands\n
 \`\`\`\npipenv run alembic revision --autogenerate -m \"init database\"\nalembic upgrade head\n\`\`\`\n
 ### Start FastAPI server\n
 \`\`\`\nuvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n\`\`\`\n
-" > README.md
+" > backend/README.md
+
+printf "## Backend\n
+[Backend Manual](backend/README.md)\n" >> README.md
 
 echo "-----------------------------"
 echo Finished $@
