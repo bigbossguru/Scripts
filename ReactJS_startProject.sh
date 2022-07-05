@@ -12,6 +12,7 @@ echo "Start generate project folder"
 echo "-----------------------------"
 
 cd project || mkdir project
+cd project || :
 npx create-react-app frontend --template typescript
 
 printf "## Frontend\n
