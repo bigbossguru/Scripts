@@ -21,15 +21,42 @@ printf "## Frontend\n
 cd frontend
 npm install axios
 npm install react-router-dom
-touch Dockerfile entrypoint.sh .env .dockerignore
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+npm install @reduxjs/toolkit react-redux
 
-mkdir src/api
+printf "/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    \"./src/**/*.{js,jsx,ts,tsx}\",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}" > tailwind.config.js
+
+printf "@tailwind base;
+@tailwind components;
+@tailwind utilities;" > src/index.css
+
+#touch Dockerfile entrypoint.sh .env .dockerignore
+
+#mkdir src/api
 mkdir src/components
-mkdir src/context
-mkdir src/hoc
+mkdir src/store
+mkdir src/models
+#mkdir src/context
+#mkdir src/hoc
 mkdir src/hooks
-mkdir src/layout
+#mkdir src/layout
 mkdir src/pages
+
+rm src/App.css
+rm src/App.test.tsx
+rm src/logo.svg
+rm src/reportWebVitals.ts
+rm -rf .git
 
 echo "-----------------------------"
 echo Finished $@
